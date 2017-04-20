@@ -11,6 +11,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Random;
 
 import javax.imageio.ImageIO;
@@ -19,29 +21,29 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 public class Player {
-
-	// Variables----------------------------------------------------------------------------
-	// Values
-	private int hits = 0;
-	@SuppressWarnings("unused")
+	private int hits;
+        private Queue<Integer> x_Hits;
+        private Queue<Integer> y_Hits;
+// Variables----------------------------------------------------------------------------
+    // Values
+    	@SuppressWarnings("unused")
 	private static int misses = 0;
-	private int[][] board = new int[10][10];
-	private int[][] gameBoard = new int[10][10];
-	private boolean[] shipPlace = new boolean[5];
-	private boolean turn = true;
-	private String shipName = "";
+	private int[][] board;
+	private static int[][] gameBoard;
+	private boolean[] shipPlace;
+	private boolean turn;
+	private String shipName;
 	private Player opponent;
 	
 	// private Player currentPlayer;
-	String currentPlayer1 = "";
+	private String currentPlayer1;
 	private static Component sunkFrame;
-	
-	// Player objects
-	Ship ac = new Ship();
-	Ship bs = new Ship();
-	Ship ds = new Ship();
-	Ship sb = new Ship();
-	Ship pb = new Ship();
+    // Player objects
+	Ship ac;
+	Ship bs;
+	Ship ds;
+	Ship sb;
+	Ship pb;
 
 	// CPU values
 	private final static int[] BATTLESHIP_SIZES = new int[] { 5, 4, 3, 3, 2 };
@@ -53,6 +55,7 @@ public class Player {
 	private int orientation = 0;
 	private boolean hunting = false;
 	private String lastShip = "";
+        private String lostShip;
 	private int nextShip = 0;
 	private int cpuStartHit_x;
 	private int cpuStartHit_y;
@@ -100,7 +103,20 @@ public class Player {
 	// ---------------------------------------------------------------
 	
 	Player(String currentPlayer) throws IOException {
-		this.currentPlayer1 = currentPlayer;
+        this.pb = new Ship();
+        this.sb = new Ship();
+            this.ds = new Ship();
+            this.bs = new Ship();
+            this.ac = new Ship();
+            this.shipName = "";
+            this.turn = true;
+            this.shipPlace = new boolean[5];
+            this.gameBoard = new int[10][10];
+            this.board = new int[10][10];
+            this.hits = 0;
+            this.currentPlayer1 = currentPlayer;
+            this.x_Hits = new LinkedList<>();
+            this.y_Hits = new LinkedList<>();
 	}
 
 	// Figures out if the ship is where you fired
@@ -1121,7 +1137,7 @@ public class Player {
 				JOptionPane.showMessageDialog(sunkFrame,
 						"Your Aircraft Carrier was sunk");
 			}
-			if (lastShip == "ac") {
+			if (lastShip == "ac" ) {
 				return true;
 			}
 			lastShip = "ac";
@@ -1226,14 +1242,21 @@ public class Player {
 		// Finds a random number in the range
 		int x = random.nextInt(10);
 		int y = random.nextInt(10);
+                
+                if(!x_Hits.isEmpty() && !y_Hits.isEmpty() && !hunting){
+                    cpuStartHit_x = x_Hits.remove();
+                    cpuStartHit_y = y_Hits.remove();
+                    hunting = true;
+                }
 
 		// If the last shot was a miss then the current shot is fired randomly 
-		if (gameBoard[x][y] == 0 && !hunting && nextShip == 0) {
+                else if (gameBoard[x][y] == 0 && !hunting && nextShip == 0) {
 			// If the shot is a hit then it sets the next shot to be searching
 			if (cpuTakeShot(x, y)) {
 				cpuStartHit_x = x;
 				cpuStartHit_y = y;
 				sameShip(x, y);
+                                lostShip = lastShip;
 				hunting = true;
 			}
 			return true;
@@ -1259,6 +1282,12 @@ public class Player {
 										cpuLastHit_x = cpuStartHit_x;
 										cpuLastHit_y = cpuStartHit_y - 1;
 									}
+                                                                        else{
+                                                                            orientation = 1;
+                                                                            cpuCompass[i] = false;
+                                                                            x_Hits.add(cpuLastHit_x);
+                                                                            y_Hits.add(cpuLastHit_y);
+                                                                        }
 								}
 								return true;
 							}
@@ -1274,11 +1303,19 @@ public class Player {
 										cpuLastHit_x = cpuStartHit_x + 1;
 										cpuLastHit_y = cpuStartHit_y;
 									}
+                                                                        else{
+                                                                            orientation = 2;
+                                                                            cpuCompass[i] = false;
+                                                                            x_Hits.add(cpuLastHit_x);
+                                                                            y_Hits.add(cpuLastHit_y);
+                                                                            }
 								}
 								return true;
 
 							}
-						} else if (i == 2) {
+
+						}
+                                                else if (i == 2) {
 							if (cpuStartHit_y + 1 < 10
 									&& gameBoard[cpuStartHit_x][cpuStartHit_y + 1] == 0) {
 								if (cpuTakeShot(cpuStartHit_x,
@@ -1289,10 +1326,15 @@ public class Player {
 										cpuLastHit_x = cpuStartHit_x;
 										cpuLastHit_y = cpuStartHit_y + 1;
 									}
+                                                                        else{
+                                                                            cpuCompass[i] = false;
+                                                                            x_Hits.add(cpuLastHit_x);
+                                                                            y_Hits.add(cpuLastHit_y);
+                                                                            orientation = 3;
+                                                                        }
 								}
 								return true;
 							}
-
 						} else if (i == 3) {
 							if (cpuStartHit_x - 1 > -1
 									&& gameBoard[cpuStartHit_x - 1][cpuStartHit_y] == 0) {
@@ -1304,7 +1346,12 @@ public class Player {
 										cpuLastHit_x = cpuStartHit_x - 1;
 										cpuLastHit_y = cpuStartHit_y;
 									}
-
+                                                                        else{
+                                                                            orientation = 4;
+                                                                            cpuCompass[i] = false;
+                                                                            x_Hits.add(cpuLastHit_x);
+                                                                            y_Hits.add(cpuLastHit_y);
+                                                                        }
 								}
 								return true;
 							}
@@ -1320,10 +1367,17 @@ public class Player {
 					if (cpuLastHit_y - 1 > -1
 							&& gameBoard[cpuLastHit_x][cpuLastHit_y - 1] == 0) {
 						if (cpuTakeShot(cpuLastHit_x, cpuLastHit_y - 1)) {
-							if (sameShip(cpuLastHit_x, cpuLastHit_y - 1)) {
-								cpuLastHit_y = cpuLastHit_y - 1;
-								return true;
-							}
+                                                    if(sameShip(cpuLastHit_x, cpuLastHit_y - 1)){
+                                                        cpuLastHit_y = cpuLastHit_y - 1;
+                                                        return true;
+                                                    }
+                                                    else{
+                                                        x_Hits.add(cpuLastHit_x);
+                                                        y_Hits.add(cpuLastHit_y-1);
+                                                        cpuLastHit_y = cpuLastHit_y - 1;
+                                                        return true;
+                                                    }
+
 						} else { // If the shot was a miss or off the board the direction is changed
 							orientation = 3;
 							cpuLastHit_y = cpuStartHit_y;
@@ -1338,10 +1392,18 @@ public class Player {
 					if (cpuLastHit_x + 1 < 10
 							&& gameBoard[cpuLastHit_x + 1][cpuLastHit_y] == 0) {
 						if (cpuTakeShot(cpuLastHit_x + 1, cpuLastHit_y)) {
-							if (sameShip(cpuLastHit_x + 1, cpuLastHit_y)) {
-								cpuLastHit_x = cpuLastHit_x + 1;
-								return true;
-							}
+                                                    if(sameShip(cpuLastHit_x + 1, cpuLastHit_y)){
+                                                        cpuLastHit_x = cpuLastHit_x + 1;
+                                                        cpuLastHit_y = cpuLastHit_y;
+                                                        return true;
+                                                    }
+                                                    else{
+                                                        x_Hits.add(cpuLastHit_x + 1);
+                                                        y_Hits.add(cpuLastHit_y);
+                                                        cpuLastHit_x = cpuLastHit_x + 1;
+                                                        return true;
+                                                    }
+
 						} else {
 							orientation = 4;
 							cpuLastHit_x = cpuStartHit_x;
@@ -1356,10 +1418,19 @@ public class Player {
 					if (cpuLastHit_y + 1 < 10
 							&& gameBoard[cpuLastHit_x][cpuLastHit_y + 1] == 0) {
 						if (cpuTakeShot(cpuLastHit_x, cpuLastHit_y + 1)) {
-							if (sameShip(cpuLastHit_x, cpuLastHit_y + 1)) {
-								cpuLastHit_y = cpuLastHit_y + 1;
-								return true;
-							}
+                                                    if(sameShip(cpuLastHit_x, cpuLastHit_y + 1)){
+                                                        cpuLastHit_x = cpuLastHit_x;
+                                                        cpuLastHit_y = cpuLastHit_y + 1;
+                                                        return true;
+                                                    }
+                                                    else{
+                                                        x_Hits.add(cpuLastHit_x);
+                                                        y_Hits.add(cpuLastHit_y + 1);
+                                                        cpuLastHit_y = cpuLastHit_y + 1;
+                                                        return true;
+                                                    }
+                                                    
+                                                    
 						} else {
 							orientation = 1;
 							cpuLastHit_y = cpuStartHit_y;
@@ -1374,10 +1445,18 @@ public class Player {
 					if (cpuLastHit_x - 1 > -1
 							&& gameBoard[cpuLastHit_x - 1][cpuLastHit_y] == 0) {
 						if (cpuTakeShot(cpuLastHit_x - 1, cpuLastHit_y)) {
-							if (sameShip(cpuLastHit_x - 1, cpuLastHit_y)) {
-								cpuLastHit_x = cpuLastHit_x - 1;
-								return true;
-							}
+                                                    if(sameShip(cpuLastHit_x - 1, cpuLastHit_y)){
+                                                        cpuLastHit_x = cpuLastHit_x - 1 ;
+                                                        cpuLastHit_y = cpuLastHit_y;
+                                                        return true;
+                                                    }
+                                                    else{
+                                                        x_Hits.add(cpuLastHit_x - 1);
+                                                        y_Hits.add(cpuLastHit_y);
+                                                        cpuLastHit_x = cpuLastHit_x - 1;
+                                                        return true;
+                                                    }
+                                                   
 						} else {
 							orientation = 2;
 							cpuLastHit_x = cpuStartHit_x;
@@ -1393,7 +1472,6 @@ public class Player {
 			}
 
 		}
-
 		return false;
 
 	}
@@ -1575,6 +1653,37 @@ public class Player {
         
         public int[][] getBoard(){
             return board;
+        }
+        
+        public void setShipName(String s){
+            shipName = s;
+        }
+        public void setHits(int i){
+            this.hits = i;
+        }
+        
+        public void setBoard(){
+            for(int i = 0; i < 9; i++){
+                for(int j = 0; j < 9; j++){
+                    this.opponent.board[i][j] = 1;
+                }
+            }
+        }
+        
+        public void setGameBoard(){
+            for(int i = 0; i < 9; i++){
+                for(int k = 0; k < 9; k++){
+                    gameBoard[i][k] = 1;
+                }
+            }
+        }
+        public boolean callSameShip() throws IOException{
+            setOpponent();
+            return sameShip(4,5);
+        }
+        public void setOpponent(){
+            this.opponent.ac.x = 4;
+            this.opponent.ac.y = 5;
         }
 
 }

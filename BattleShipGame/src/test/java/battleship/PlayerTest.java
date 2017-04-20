@@ -6,24 +6,20 @@
 package battleship;
 
 import java.io.IOException;
-import org.databene.contiperf.PerfTest;
-import org.databene.contiperf.junit.ContiPerfRule;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Rule;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
-import org.mockito.stubbing.Answer;
+
 
 /**
  *
@@ -32,25 +28,22 @@ import org.mockito.stubbing.Answer;
 public class PlayerTest {
     @Rule
     public MockitoRule mockrule = MockitoJUnit.rule();
-    @Rule
-    public ContiPerfRule CPRule = new ContiPerfRule();
     @Mock
     private Player.Ship ship = mock(Player.Ship.class);
-    @Mock
-    private Player PlayerMock = mock(Player.class);
     
-    @InjectMocks
-    private Player instance;
+    private Player player;
+    private Player cpu;
      
     public PlayerTest() throws IOException{
-        this.instance = new Player("Player");
+        player = new Player("Player");
+        cpu = new Player("CPU");
+        player.setOpponent(cpu);
+        cpu.setOpponent(player);
         MockitoAnnotations.initMocks(this);
-
     }
     
     @BeforeClass
     public static void setUpClass() {        
-
     }
     
     @AfterClass
@@ -63,46 +56,75 @@ public class PlayerTest {
      * @throws java.lang.Exception
      */
     @Test
-    @PerfTest(invocations = 1000, threads = 1)
     public void testIsRange() throws Exception {   
         System.out.println("isRange");
         boolean expResult = true;
+        Player.Ship ship = mock(Player.Ship.class);
         Player.Ship ship2 = mock(Player.Ship.class);
         ship.size = 2;
         ship2.size = 5;
         
         when(ship.getDirectionOfShip()).thenReturn("Vertical");
         when(ship.getY()).thenReturn(5);
+        when(ship.getX()).thenReturn(2);
+        
         when(ship2.getDirectionOfShip()).thenReturn("Horizontal");
         when(ship2.getX()).thenReturn(4);
-
-        assertEquals(expResult, instance.isRange(ship, 0, 5));
-        assertEquals(expResult, instance.isRange(ship2, 4, 0));
+        when(ship2.getY()).thenReturn(3);
+        
+        assertEquals(expResult, player.isRange(ship, 2, 5));
+        verify(ship, times(1)).getDirectionOfShip();
+        
+        assertEquals(expResult, player.isRange(ship2, 4, 3));
+        verify(ship2, times(2)).getDirectionOfShip();
     }
     
     @Test
-    public void testremoveOldShip() throws IOException{
-        System.out.println("removeOldShip");        
-        int x = 0;
-        ship.name = "Destroyer";
-        ship.size = 5;
-        when(ship.getDirectionOfShip()).thenReturn("Vertical");
-        when(ship.getX()).thenReturn(5);
-        String shipName = "BattleShip";
-        int[][] board = instance.getBoard();
-        
-        //sets board spaces to 1
-        while(x < ship.size){
-            board[ship.getX()][x] = 1;
-            x++;
-        }
-        
-        //sets board spaces to 0
-        instance.removeOldShip();
-        while(x < ship.size){
-        assertEquals(0, board[ship.getX()][x]);
-        x++;
-        }
+    public void testcheckWin() throws Exception {
+        System.out.println("Testing checkWin");
+        player.setHits(17);
+        assertFalse(!player.checkWin());
     }
-
+    
+    @Test
+    public void testcpuTakeShot() throws Exception {
+        System.out.println("Testing cpuTakeShot");
+        boolean result = false;
+        player.setBoard();
+        result = player.cpuTakeShot(8, 3);
+        assertTrue(result);
+    }
+    
+    @Test
+    public void testcpuFire() throws IOException{
+        System.out.println("Testing cpuFire");
+        assertTrue(player.cpuFire());
+    }
+    
+    @Test
+    public void testfire() throws IOException{
+        player.setGameBoard();
+        assertFalse(player.fire(3, 2));
+    }
+    
+    @Test
+    public void testsunk(){
+        Player.Ship ship = mock(Player.Ship.class);
+        ship.name = "Submarine";
+        ship.hits = 2;
+        ship.size = 3;
+        assertFalse(ship.sunk());
+    }
+    
+    @Test
+    public void testsameShip() throws IOException{
+        System.out.println("Testing sameShip()");
+        Player.Ship ship = mock(Player.Ship.class);
+        ship.size = 5;
+        //ship.hits = 0;
+        ship.name = "ac";
+        when(ship.sunk()).thenReturn(true);
+        when(ship.getDirectionOfShip()).thenReturn("Horizontal");
+        assertTrue(player.callSameShip());
+    }
 }
